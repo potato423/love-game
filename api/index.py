@@ -1,124 +1,8 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 app = Flask(__name__)
-
-# HTML 内容直接写在这里
-HTML_CONTENT = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>给可爱的你的解密游戏 ❤</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #fff;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 600px;
-            width: 100%;
-            text-align: center;
-        }
-        .question {
-            white-space: pre-line;
-            margin: 20px 0;
-            font-size: 1.2em;
-            color: #333;
-        }
-        .input-box {
-            width: 80%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 2px solid #000;
-            border-radius: 5px;
-            font-size: 1.1em;
-        }
-        .submit-btn {
-            background-color: #ffc0cb;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 1.1em;
-            color: #fff;
-            cursor: pointer;
-            margin: 10px 0;
-        }
-        .message {
-            margin: 20px 0;
-            font-size: 1.1em;
-            color: #ffc0cb;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div id="question" class="question"></div>
-        <input type="text" id="answer" class="input-box" placeholder="在这里输入答案">
-        <button onclick="checkAnswer()" class="submit-btn">确认</button>
-        <div id="message" class="message"></div>
-    </div>
-
-    <script>
-        let currentRiddle = 0;
-        
-        function init() {
-            document.getElementById('question').textContent = "欢迎来玩解密游戏！\\n准备好了吗？输入：好";
-        }
-
-        function checkAnswer() {
-            const answer = document.getElementById('answer').value;
-            
-            fetch('/check_answer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    riddle_id: currentRiddle,
-                    answer: answer
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'correct') {
-                    document.getElementById('message').textContent = data.reward;
-                    document.getElementById('answer').value = '';
-                    currentRiddle++;
-                    
-                    setTimeout(() => {
-                        if (data.next_question) {
-                            document.getElementById('question').textContent = data.next_question;
-                            document.getElementById('message').textContent = '';
-                        } else {
-                            document.getElementById('question').textContent = '恭喜通关！爱你哦~';
-                            document.getElementById('answer').style.display = 'none';
-                            document.querySelector('.submit-btn').style.display = 'none';
-                        }
-                    }, 2000);
-                } else if (data.status === 'wrong') {
-                    document.getElementById('message').textContent = data.message;
-                }
-            });
-        }
-
-        window.onload = init;
-
-        document.getElementById('answer').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                checkAnswer();
-            }
-        });
-    </script>
-</body>
-</html>
-'''
+CORS(app)
 
 riddles = [
     {
@@ -143,10 +27,69 @@ riddles = [
     }
 ]
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    return HTML_CONTENT, 200, {'Content-Type': 'text/html; charset=utf-8'}
+@app.route('/')
+def index():
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>解密游戏</title>
+        <style>
+            body { text-align: center; padding: 20px; }
+            input { margin: 10px; padding: 5px; }
+            button { margin: 10px; padding: 5px 10px; }
+        </style>
+    </head>
+    <body>
+        <div id="question"></div>
+        <input type="text" id="answer" placeholder="输入答案">
+        <button onclick="checkAnswer()">提交</button>
+        <div id="message"></div>
+        <script>
+            let currentRiddle = 0;
+            
+            function init() {
+                document.getElementById('question').textContent = "欢迎来玩解密游戏！\\n准备好了吗？输入：好";
+            }
+            
+            function checkAnswer() {
+                const answer = document.getElementById('answer').value;
+                fetch('/check_answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        riddle_id: currentRiddle,
+                        answer: answer
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'correct') {
+                        document.getElementById('message').textContent = data.reward;
+                        document.getElementById('answer').value = '';
+                        currentRiddle++;
+                        setTimeout(() => {
+                            if (data.next_question) {
+                                document.getElementById('question').textContent = data.next_question;
+                                document.getElementById('message').textContent = '';
+                            } else {
+                                document.getElementById('question').textContent = '恭喜通关！';
+                                document.getElementById('answer').style.display = 'none';
+                                document.querySelector('button').style.display = 'none';
+                            }
+                        }, 2000);
+                    } else {
+                        document.getElementById('message').textContent = '答错了，再试试！';
+                    }
+                });
+            }
+            
+            window.onload = init;
+        </script>
+    </body>
+    </html>
+    '''
 
 @app.route('/check_answer', methods=['POST'])
 def check_answer():
@@ -176,8 +119,7 @@ def check_answer():
             'message': str(e)
         }), 500
 
+# Vercel handler
 def handler(request):
-    if request.method == 'POST' and request.path == '/check_answer':
-        with app.request_context(request):
-            return check_answer()
-    return catch_all('')
+    with app.request_context(request):
+        return app.handle_request()
