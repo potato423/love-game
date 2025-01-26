@@ -31,6 +31,10 @@ riddles = [
 def index():
     return render_template('index.html')
 
+@app.route('/api', methods=['POST'])
+def api():
+    return jsonify({"message": "API is working"})
+
 @app.route('/check_answer', methods=['POST'])
 def check_answer():
     try:
@@ -59,6 +63,7 @@ def check_answer():
             'message': str(e)
         }), 500
 
-# 这个是给 Vercel 用的
-def handler(request, context):
-    return app(request)
+# Vercel handler
+def handler(request):
+    with app.request_context(request):
+        return app.handle_request()
