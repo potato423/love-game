@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 
-app = Flask(__name__, template_folder='../templates')
+app = Flask(__name__)
 CORS(app)
 
 riddles = [
@@ -27,9 +27,8 @@ riddles = [
     }
 ]
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
+@app.route('/')
+def index():
     return render_template('index.html')
 
 @app.route('/check_answer', methods=['POST'])
@@ -60,4 +59,6 @@ def check_answer():
             'message': str(e)
         }), 500
 
-app = app.wsgi_app 
+# 这个是给 Vercel 用的
+def handler(request, context):
+    return app(request)
