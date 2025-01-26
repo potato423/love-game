@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # 谜题数据
 riddles = [
@@ -50,6 +52,8 @@ def check_answer():
             'status': 'wrong',
             'message': '答错啦，再想想~'
         })
+
+app = app.wsgi_app
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
