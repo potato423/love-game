@@ -143,9 +143,10 @@ riddles = [
     }
 ]
 
-@app.route('/')
-def index():
-    return HTML_CONTENT
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    return HTML_CONTENT, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/check_answer', methods=['POST'])
 def check_answer():
@@ -174,3 +175,9 @@ def check_answer():
             'status': 'error',
             'message': str(e)
         }), 500
+
+def handler(request):
+    if request.method == 'POST' and request.path == '/check_answer':
+        with app.request_context(request):
+            return check_answer()
+    return catch_all('')
